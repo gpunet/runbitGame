@@ -98,6 +98,17 @@
 </template>
 
 <script>
+	import {
+		ethers,
+		BigNumber
+	} from 'ethers'
+	import {
+		refStoreAddress,
+		refAbi
+	} from '../../../contract/address.js'
+	import {
+		useContract
+	} from '../../../contract/useContract.js'
 	export default {
 		data() {
 			return {
@@ -106,20 +117,28 @@
 				scrrenHeight: 10,
 				value: "",
 				title: 'Hello',
-				layerAddress:'',
-				rpcaddr:'',
 				myAccount: '',
-				layerAbi:'',
+				contract: null,
+				refer: '0x0000000000000000000000000000000000000000'
 			}
 		},
 		onLoad() {
-        this.rpcaddr = getApp().globalData.rpcaddr;
-		 this.layerAddress = getApp().globalData.layerAddress;
-		  this.layerAbi = getApp().globalData.layerAbi;
+
 		},
 		mounted() {
 			this.scrrenHeight = uni.getSystemInfoSync().windowHeight;
-			this.$refs.isopen.open();
+			try {
+				this.getMetamskConnect().then(res => {
+					this.getReferrer(this.myAccount[0])
+					console.log(this.myAccount[0], this.refer)
+
+				})
+
+				if (this.refer === '0x0000000000000000000000000000000000000000') this.$refs.isopen.open();
+			} catch (e) {
+				console.error(e);
+			}
+
 		},
 		beforeCreate() {
 
@@ -129,6 +148,7 @@
 				this.$refs.inputDialog.open()
 			},
 			dialogInputConfirm(val) {
+
 				uni.showLoading({
 					title: '3秒后会关闭'
 				})
@@ -141,58 +161,72 @@
 					this.$refs.inputDialog.close()
 				}, 3000)
 			},
-			dialogInputConfirm2(val) {
-				uni.showLoading({
-					title: '3秒后会关闭'
-				})
-			
-				setTimeout(() => {
-					uni.hideLoading()
-					console.log(val)
-					this.value = val
-					// 关闭窗口后，恢复默认内容
-					this.$refs.isopen.close()
-				}, 3000)
+			async dialogInputConfirm2(val) {
+
+				console.log(val)
+				try {
+					let tx = await this.contract.addReferrerWithCheck(val)
+					console.log(tx.hash)
+					uni.showLoading({
+						title: '请稍等...'
+					})
+					tx.wait().then(res=>{uni.hideLoading()})
+				} catch (e) {
+					console.error(e)
+				}
+
+				
+
+				// setTimeout(() => {
+				// 	uni.hideLoading()
+				// 	console.log(val)
+				// 	this.value = val
+				// 	// 关闭窗口后，恢复默认内容
+				// 	this.$refs.isopen.close()
+				// }, 3000)
 			},
-			get() {
-				if (window.ethereum) {
-					window.ethereum.enable().then((res) => {
-						alert("当前钱包地址:" + res[0]);
-						this.myAccount = res[0];
+
+			isMetaMask() {
+				const {
+					ethereum
+				} = window;
+				return Boolean(ethereum && ethereum.isMetaMask);
+			},
+			async getChainId() {
+				const {
+					ethereum
+				} = window;
+				try {
+					const chainId = await ethereum.request({
+						method: "eth_chainId"
 					});
-				} else {
-					alert("请安装MetaMask钱包");
+				} catch (err) {
+					console.error(err);
 				}
 			},
-
-			async getDay() {
-				const _this = this
-				window.web3 = new this.Web3(window.ethereum)
-
-				let contract = new web3.eth.Contract(_this.layerAbi, _this.layerAddress);
-				let gasPrice = await web3.eth.getGasPrice() * 2;
-				contract.methods.transfer("1000").send({
-						from: "0xb9eaE99d3E3a1fD3bBf1De4c635114063F6e3573",
-						gas: 1200000,
-						gasPrice: gasPrice
-					},
-					function(error, transactionHash) {
-						if (!error) {
-
-						} else {
-							console.log(error);
-						}
-					});
-
-				// var Referrer = await contract.methods.referrer("0xb9eaE99d3E3a1fD3bBf1De4c635114063F6e3573").call();
-
-				// let contract = new window.web3.eth.Contract(_this.layerAbi, _this.layerAddress);
-				// var Referrer =  contract.methods.getDay().call();
-
-
-
-			}
-
+			async getMetamskConnect() {
+				if (!this.isMetaMask()) {
+					openUrl("https://metamask.io/", "install metamsk");
+				}
+				if (window.ethereum) {
+					try {
+						const provider = new ethers.providers.Web3Provider(window.ethereum);
+						this.myAccount = await provider.send("eth_requestAccounts", []);
+						const signer = provider.getSigner();
+						var balance = await signer.getBalance();
+						let readercontract = new ethers.Contract(refStoreAddress, refAbi, provider);
+						this.contract = readercontract.connect(signer)
+						// console.log("accc",this.myAccount[0])
+					} catch (error) {
+						console.error(error);
+					}
+				} else {
+					console.warn("Please authorize to access tour account");
+				}
+			},
+			async getReferrer(address) {
+				this.refer = await this.contract.referrer(address);
+			},
 
 		}
 	}
