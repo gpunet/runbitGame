@@ -29,12 +29,8 @@
 			<view class="uni-flex uni-row linheigh" style="margin-top: 0.625rem;">
 				<view class="lin1">级别</view>
 				
-				<img style="margin-left: 55%;" class="star" :src="level>0?'../../static/Star140.png':'../../static/Star136.png'" />
-				<img class="star" :src="level>1?'../../static/Star140.png':'../../static/Star136.png'" />
-				<img class="star" :src="level>2?'../../static/Star140.png':'../../static/Star136.png'" />
-				<img class="star" :src="level>3?'../../static/Star140.png':'../../static/Star136.png'" />
-				<img class="star" :src="level>4?'../../static/Star140.png':'../../static/Star136.png'" />
-				<img class="star" :src="level>5?'../../static/Star140.png':'../../static/Star136.png'" />
+			<view class="lin2">LV{{level}}</view>
+			<!-- <img class="backIcon" src="../../static/Group11596.png" /> -->
 			</view>
 
 			<view class="uni-flex uni-row linheigh" style="margin-top: 0.625rem;">
@@ -78,7 +74,7 @@
 			if(values)
 				this.inviter=hideBankCards(values);
 				if(setp)
-				this.distance=setp*0.7/1000;
+				this.distance=this.getFix2(setp*0.7/1000);
 			
 			
 		},
@@ -99,15 +95,21 @@
 					url: '../invite/invite'
 				});
 			},
+			getFix2(num) {
+				var value = Math.floor(num * 100) / 100
+				return value
+			},
 			//获取最新等级
 			getLevel() {
 				//从接口获取最新步数
 					//todo 设置baseurl
-					this.baseurl = 'https://gapi.runbit.org/api/v1/'
+				
+					var addr =getApp().globalData.userAccount;
+					this.baseurl = 'https://gapi.runbit.lol/api/v1/'
 					uni.request({
 						url: this.baseurl + 'game/getClassLevel',
 						data: {
-							addr: uni.getStorageSync('myAccount')
+							addr: addr
 						},
 						method: "GET",
 						success: res => {
@@ -205,7 +207,7 @@
 		left: 0px;
 		top: 0px;
 
-		background: linear-gradient(180deg, #FFF7B0 0%, rgba(255, 247, 176, 0) 100%);
+		background: linear-gradient(180deg, #F3F3F3 0%, rgba(255, 177, 20, 0.0) 100%);
 		border-radius: 0px 0px 36px 36px;
 	}
 
